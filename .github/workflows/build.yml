@@ -33,7 +33,8 @@ jobs:
       - run: npx cap add android
       - name: Icons
         run: |
-          sudo apt-get install -y imagemagick >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
           for p in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
             set -- $p; d=android/app/src/main/res/mipmap-$1
             convert assets/icon.png -resize ${2}x${2} $d/ic_launcher.png
