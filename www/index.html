@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b16"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png">
+<title>Amin Mahmoud</title>
+<style>
+:root{--bg:#070b16;--card:#101a30;--gold:#f2b632;--tx:#eef1f8;--mu:#8e9ab5;--ok:#35c27a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;padding-bottom:76px}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:linear-gradient(#142244,#070b16);border-bottom:1px solid #1f2d4d}
+header img{width:44px;height:44px;border-radius:12px}header b{font-size:18px;color:var(--gold);display:block}header small{color:var(--mu);font-size:12px}
+header div{flex:1}#up{background:#1a2848;color:var(--gold);border:1px solid #2a3d6b;border-radius:12px;padding:10px 12px;font-size:14px}
+main{padding:16px;max-width:560px;margin:auto}h2{margin:6px 0}.m{color:var(--mu);font-size:14px}
+input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #2a3d6b;background:#0b1224;color:var(--tx);font-size:16px;margin:6px 0}
+.row{display:flex;gap:8px}.row input{flex:1}.b{background:linear-gradient(135deg,#ffe08a,#f2b632 60%,#b9780f);color:#1a1200;border:0;border-radius:12px;padding:13px 18px;font-weight:700;font-size:16px;margin:6px 0}
+.b.w{width:100%}.card{background:var(--card);border:1px solid #1f2d4d;border-radius:16px;padding:14px;margin:12px 0}
+.tag{background:#1a2848;color:var(--gold);border-radius:8px;padding:2px 8px;font-size:13px}.st{font-size:20px;font-weight:700;color:var(--gold);margin:10px 0}
+.steps{display:flex;gap:5px;margin-top:10px}.steps i{flex:1;height:7px;border-radius:4px;background:#22305a}.steps i.d{background:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.chips span{padding:9px 13px;border-radius:20px;border:1px solid #2a3d6b;background:#0b1224;font-size:14px}.chips span.on{background:var(--gold);color:#1a1200;font-weight:700}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0a1122;border-top:1px solid #1f2d4d;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;padding:15px 4px;background:none;border:0;color:var(--mu);font-size:15px}nav button.on{color:var(--gold);font-weight:700}
+.warn{background:#3a2c08;color:#ffd978;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:8px}
+#toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1200;padding:10px 18px;border-radius:20px;font-weight:700;display:none;z-index:9}
+.wa{background:#1fa855;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:14px}.ft{text-align:center;color:var(--mu);font-size:12px;margin:20px 0}
+</style></head><body>
+<header><img src="icon-192.png" alt=""><div><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small></div><button id="up">🔄 تحديث</button></header>
+<main id="v"></main>
+<nav><button data-t="track">تتبع جهازي</button><button data-t="ask">استفسار</button><button data-t="adm">الإدارة</button></nav>
+<div id="toast"></div>
+<script src="config.js"></script>
+<script>
+const C=window.CFG,live=!!(C.SUPABASE_URL&&C.SUPABASE_KEY),V=document.getElementById('v');
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ST={received:'تم الاستلام',checking:'جاري الفحص',waiting_part:'في انتظار قطعة غيار',repairing:'جاري الإصلاح',ready:'جاهز للاستلام ✅',delivered:'تم التسليم'};
+const KEYS=Object.keys(ST);
+const toast=t=>{const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)};
+let token=localStorage.getItem('tk')||'',ORD=[];
+const isAdm=()=>live?!!token:sessionStorage.adm==='1';
+async function sb(p,o={}){const r=await fetch(C.SUPABASE_URL+p,{...o,headers:{apikey:C.SUPABASE_KEY,Authorization:'Bearer '+(token||C.SUPABASE_KEY),'Content-Type':'application/json',Prefer:'return=representation',...(o.headers||{})}});if(!r.ok)throw new Error(await r.text());return r.status==204?null:r.json()}
+const L=()=>JSON.parse(localStorage.orders||'[]'),S=a=>localStorage.orders=JSON.stringify(a);
+const db={
+ async track(n){if(live){const r=await sb('/rest/v1/rpc/track_order',{method:'POST',body:JSON.stringify({n:+n})});return r[0]}return L().find(o=>o.num==n)},
+ async list(){return live?sb('/rest/v1/orders?order=created_at.desc'):L().sort((a,b)=>b.num-a.num)},
+ async add(o){if(live)return(await sb('/rest/v1/orders',{method:'POST',body:JSON.stringify(o)}))[0];const a=L();o.num=a.reduce((m,x)=>Math.max(m,x.num),0)+1;o.status='received';o.updated_at=new Date().toISOString();a.push(o);S(a);return o},
+ async upd(o,p){if(live)return sb('/rest/v1/orders?id=eq.'+o.id,{method:'PATCH',body:JSON.stringify({...p,updated_at:new Date().toISOString()})});const a=L();Object.assign(a.find(x=>x.num==o.num),p,{updated_at:new Date().toISOString()});S(a)}
+};
+const wa=(num,txt)=>'https://wa.me/'+num+'?text='+encodeURIComponent(txt);
+const intl=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('0')?'20'+p.slice(1):p};
+const demo=()=>live?'':'<div class="warn">وضع تجريبي: البيانات محفوظة على هذا الجهاز فقط. اربط Supabase من config.js.</div>';
+
+function go(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));({track:rTrack,ask:rAsk,adm:rAdm})[t]()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+
+function rTrack(){
+ V.innerHTML=demo()+'<h2>تابع جهازك</h2><p class="m">اكتب رقم الإيصال اللي أخدته من المحل</p><div class="row"><input id="n" type="number" inputmode="numeric" placeholder="مثال: 20"><button class="b" id="g">بحث</button></div><div id="r"></div>'+'<div class="ft">الإصدار '+esc(C.VERSION)+'</div>';
+ $('#g').onclick=async()=>{const n=$('#n').value;if(!n)return;$('#r').innerHTML='<p class="m">جاري البحث...</p>';
+  try{const o=await db.track(n);if(!o){$('#r').innerHTML='<div class="card">مفيش جهاز بالرقم ده، تأكد من الإيصال.</div>';return}
+   const i=KEYS.indexOf(o.status),k=KEYS.slice(0,5);
+   $('#r').innerHTML='<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><div class="st">'+ST[o.status]+'</div>'+(o.note?'<p>'+esc(o.note)+'</p>':'')+(o.price?'<p class="m">التكلفة: '+esc(o.price)+' جنيه</p>':'')+'<div class="steps">'+k.map((x,j)=>'<i class="'+(j<=i?'d':'')+'"></i>').join('')+'</div></div>'}
+  catch(e){$('#r').innerHTML='<div class="card">تعذر الاتصال، جرّب تاني.</div>'}}
+}
+
+const BR={Apple:['iPhone 11','iPhone 12','iPhone 13','iPhone 14','iPhone 15','iPhone 16'],Samsung:['Galaxy A15','Galaxy A25','Galaxy A55','Galaxy S23','Galaxy S24'],Xiaomi:['Redmi Note 12','Redmi Note 13','Redmi 13C','Poco X6'],Oppo:['A17','A38','Reno 11'],Realme:['C55','C67','11 Pro'],Vivo:['Y17s','Y36','V29'],Huawei:['Y9','Nova 9'],Infinix:['Hot 40','Note 30'],Tecno:['Spark 20','Camon 20'],'أخرى':[]};
+const IS=['شاشة','بطارية','شاحن / بورت شحن','سوفت وير','كاميرا','سماعة / ميكروفون','دخل عليه مياه','عطل تاني'];
+function rAsk(){
+ V.innerHTML='<h2>استفسار سريع</h2><p class="m">اختار جهازك والعطل وهيوصلنا على واتساب فورًا</p><select id="br">'+Object.keys(BR).map(b=>'<option>'+b+'</option>').join('')+'</select><input id="md" list="ml" placeholder="الموديل"><datalist id="ml"></datalist><div class="chips" id="ch">'+IS.map(x=>'<span>'+x+'</span>').join('')+'</div><button class="b w" id="sd">إرسال على واتساب</button>';
+ const fill=()=>{$('#ml').innerHTML=BR[$('#br').value].map(m=>'<option value="'+m+'">').join('');$('#md').value=''};fill();$('#br').onchange=fill;
+ document.querySelectorAll('#ch span').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+ $('#sd').onclick=()=>{const is=[...document.querySelectorAll('#ch .on')].map(s=>s.textContent);if(!$('#md').value||!is.length)return toast('اختار الموديل والعطل');
+  location.href=wa(C.WHATSAPP,'استفسار صيانة\nالجهاز: '+$('#br').value+' '+$('#md').value+'\nالعطل: '+is.join('، '))}
+}
+
+function rAdm(){
+ if(!isAdm()){V.innerHTML=demo()+'<h2>دخول الإدارة</h2>'+(live?'<input id="em" type="email" placeholder="الإيميل">':'<p class="m">الرمز التجريبي: 1234</p>')+'<input id="pw" type="password" placeholder="'+(live?'الباسورد':'الرمز')+'"><button class="b w" id="lg">دخول</button>';
+  $('#lg').onclick=async()=>{try{if(live){const r=await sb('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('#em').value,password:$('#pw').value})});token=r.access_token;localStorage.tk=token}else{if($('#pw').value!=='1234')throw 0;sessionStorage.adm='1'}rAdm()}catch(e){toast('بيانات غير صحيحة')}};return}
+ V.innerHTML=demo()+'<div class="row"><h2 style="flex:1">لوحة الإدارة</h2><button class="wa" id="lo">خروج</button></div><div class="card"><b>جهاز جديد</b><input id="cn" placeholder="اسم العميل"><input id="cp" type="tel" placeholder="رقم موبايل العميل"><input id="dv" placeholder="الجهاز (مثال: iPhone 15)"><input id="is" placeholder="العطل"><input id="pr" type="number" placeholder="التكلفة (اختياري)"><button class="b w" id="ad">تسجيل واستلام الجهاز</button></div><div id="ls"></div>';
+ $('#lo').onclick=()=>{token='';localStorage.removeItem('tk');sessionStorage.removeItem('adm');rAdm()};
+ $('#ad').onclick=async()=>{if(!$('#dv').value)return toast('اكتب الجهاز');try{const o=await db.add({customer:$('#cn').value,phone:$('#cp').value,device:$('#dv').value,issue:$('#is').value,price:$('#pr').value||null});toast('رقم الإيصال: '+o.num);['cn','cp','dv','is','pr'].forEach(i=>$('#'+i).value='');load()}catch(e){toast('خطأ في الحفظ')}};
+ load();
+}
+async function load(){try{ORD=await db.list()}catch(e){if(live){token='';localStorage.removeItem('tk');return rAdm()}}
+ $('#ls').innerHTML=ORD.map((o,i)=>'<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><p class="m">'+esc(o.customer)+' • '+esc(o.issue)+'</p><select id="s'+i+'">'+KEYS.map(k=>'<option value="'+k+'"'+(k==o.status?' selected':'')+'>'+ST[k]+'</option>').join('')+'</select><input id="t'+i+'" placeholder="ملاحظة للعميل" value="'+esc(o.note)+'"><div class="row"><button class="b" data-sv="'+i+'">حفظ</button>'+(o.phone?'<button class="wa" data-wa="'+i+'">واتساب للعميل</button>':'')+'</div></div>').join('')||'<p class="m">لسه مفيش أجهزة.</p>';
+ document.querySelectorAll('[data-sv]').forEach(b=>b.onclick=async()=>{const i=b.dataset.sv;try{await db.upd(ORD[i],{status:$('#s'+i).value,note:$('#t'+i).value});toast('تم الحفظ');load()}catch(e){toast('خطأ')}});
+ document.querySelectorAll('[data-wa]').forEach(b=>b.onclick=()=>{const o=ORD[b.dataset.wa];location.href=wa(intl(o.phone),'أهلًا '+(o.customer||'')+'\nجهازك ('+o.device+') رقم #'+o.num+'\nالحالة: '+ST[$('#s'+b.dataset.wa).value]+(o.price?'\nالتكلفة: '+o.price+' جنيه':'')+'\nAmin Mahmoud')})}
+
+$('#up').onclick=async()=>{toast('جاري البحث عن تحديث...');
+ try{const v=await(await fetch('version.json?'+Date.now(),{cache:'no-store'})).json();
+  if(v.version===C.VERSION)return toast('أنت على آخر إصدار ('+C.VERSION+')');
+  toast('تحديث جديد '+v.version+' ...');
+  (await navigator.serviceWorker?.getRegistrations()||[]).forEach(r=>r.unregister());
+  for(const k of await caches.keys())await caches.delete(k);
+  setTimeout(()=>location.reload(),900)}
+ catch(e){toast('تعذر التحديث، تأكد من الإنترنت')}};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+go('track');
+</script></body></html>
