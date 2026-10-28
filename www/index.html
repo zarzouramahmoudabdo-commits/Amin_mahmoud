@@ -20,12 +20,12 @@ nav button{flex:1;padding:15px 4px;background:none;border:0;color:var(--mu);font
 .warn{background:#3a2c08;color:#ffd978;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:8px}
 #toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1200;padding:10px 18px;border-radius:20px;font-weight:700;display:none;z-index:9}
 .wa{background:#1fa855;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:14px}.ft{text-align:center;color:var(--mu);font-size:12px;margin:20px 0}
-</style></head><body>
+a.wa{text-decoration:none;display:inline-block}#rc{position:fixed;inset:0;background:rgba(0,0,0,.85);overflow:auto;padding:16px;z-index:20}@media print{body>*:not(#rc){display:none!important}#rc{position:static;background:#fff}#rc .row{display:none}}</style></head><body>
 <header><img src="icon-192.png" alt=""><div><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small></div><button id="up">🔄 تحديث</button></header>
 <main id="v"></main>
 <nav><button data-t="track">تتبع جهازي</button><button data-t="ask">استفسار</button><button data-t="adm">الإدارة</button></nav>
 <div id="toast"></div>
-<script src="config.js"></script>
+<script src="config.js"></script><script src="qr.js"></script>
 <script>
 const C=window.CFG,ok=!!(C.SUPABASE_URL&&C.SUPABASE_KEY),V=document.getElementById('v');
 const $=s=>document.querySelector(s);
@@ -42,8 +42,12 @@ async function sb(p,o={},r=0){const h={apikey:C.SUPABASE_KEY,'Content-Type':'app
 const db={
  async track(n,p){const r=await sb('/rest/v1/rpc/track_order',{method:'POST',body:JSON.stringify({n:+n,p:String(p)})});return r[0]},
  list:()=>sb('/rest/v1/orders?order=created_at.desc'),
- async add(o){return(await sb('/rest/v1/orders',{method:'POST',body:JSON.stringify(o)}))[0]},
- upd:(o,p)=>sb('/rest/v1/orders?id=eq.'+o.id,{method:'PATCH',body:JSON.stringify({...p,updated_at:new Date().toISOString()})})
+ add:async o=>(await sb('/rest/v1/orders',{method:'POST',body:JSON.stringify(o)}))[0],
+ upd:(o,p)=>sb('/rest/v1/orders?id=eq.'+o.id,{method:'PATCH',body:JSON.stringify({...p,updated_at:new Date().toISOString()})}),
+ get:(t,q='')=>sb('/rest/v1/'+t+q),
+ ins:(t,o)=>sb('/rest/v1/'+t,{method:'POST',body:JSON.stringify(o)}),
+ pat:(t,id,o)=>sb('/rest/v1/'+t+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(o)}),
+ del:(t,id)=>sb('/rest/v1/'+t+'?id=eq.'+id,{method:'DELETE'})
 };
 const wa=(num,txt)=>'https://wa.me/'+num+'?text='+encodeURIComponent(txt);
 const intl=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('0')?'20'+p.slice(1):p};
@@ -52,38 +56,82 @@ function go(t){if(!ok){V.innerHTML='<div class="card">التطبيق غير مر
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
 
 function rTrack(){
- V.innerHTML='<h2>تابع جهازك</h2><p class="m">اكتب رقم الإيصال وآخر 4 أرقام من موبايلك</p><input id="n" type="number" inputmode="numeric" placeholder="رقم الإيصال"><input id="p" type="tel" inputmode="numeric" maxlength="4" placeholder="آخر 4 أرقام من موبايلك"><button class="b w" id="g">بحث</button><div id="r"></div>'+'<div class="ft">الإصدار '+esc(C.VERSION)+'</div>';
- $('#g').onclick=async()=>{const n=$('#n').value,p=$('#p').value.replace(/\D/g,'');if(!n||p.length<4)return toast('اكتب الرقم وآخر 4 أرقام');$('#r').innerHTML='<p class="m">جاري البحث...</p>';
+ V.innerHTML='<h2>تابع جهازك</h2><p class="m">اكتب رقم الإيصال وآخر 4 أرقام من موبايلك</p><input id="n" type="number" inputmode="numeric" placeholder="رقم الإيصال"><input id="p" type="tel" inputmode="numeric" maxlength="4" placeholder="آخر 4 أرقام من موبايلك"><button class="b w" id="g">بحث</button><div id="r"></div>'+'<div class="row"><a class="wa" href="tel:+'+C.WHATSAPP+'">📞 اتصال</a>'+(C.MAP?'<a class="wa" href="'+C.MAP+'">📍 الموقع</a>':'')+'</div>'+(C.HOURS?'<p class="m">'+esc(C.HOURS)+'</p>':'')+'<div class="ft">الإصدار '+esc(C.VERSION)+'</div>';
+ const hm=location.hash.match(/n=(\d+)/);if(hm)$('#n').value=hm[1];$('#g').onclick=async()=>{const n=$('#n').value,p=$('#p').value.replace(/\D/g,'');if(!n||p.length<4)return toast('اكتب الرقم وآخر 4 أرقام');$('#r').innerHTML='<p class="m">جاري البحث...</p>';
   try{const o=await db.track(n,p);if(!o){$('#r').innerHTML='<div class="card">مفيش جهاز بالبيانات دي، تأكد من الرقم وآخر 4 أرقام.</div>';return}
    const i=KEYS.indexOf(o.status),k=KEYS.slice(0,5);
-   $('#r').innerHTML='<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><div class="st">'+ST[o.status]+'</div>'+(o.note?'<p>'+esc(o.note)+'</p>':'')+(o.price?'<p class="m">التكلفة: '+esc(o.price)+' جنيه</p>':'')+'<div class="steps">'+k.map((x,j)=>'<i class="'+(j<=i?'d':'')+'"></i>').join('')+'</div></div>'}
+   $('#r').innerHTML='<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><div class="st">'+ST[o.status]+'</div>'+(o.note?'<p>'+esc(o.note)+'</p>':'')+(o.price?'<p class="m">التكلفة: '+esc(o.price)+' جنيه'+(+o.deposit?' • العربون: '+esc(o.deposit)+' • المتبقي: '+(o.price-o.deposit):'')+'</p>':'')+(o.warranty_until?'<p class="m">🛡️ الضمان حتى '+esc(o.warranty_until)+'</p>':'')+'<div class="steps">'+k.map((x,j)=>'<i class="'+(j<=i?'d':'')+'"></i>').join('')+'</div></div>'}
   catch(e){$('#r').innerHTML='<div class="card">تعذر الاتصال، جرّب تاني.</div>'}}
 }
 
 const BR={Apple:['iPhone 11','iPhone 12','iPhone 13','iPhone 14','iPhone 15','iPhone 16'],Samsung:['Galaxy A15','Galaxy A25','Galaxy A55','Galaxy S23','Galaxy S24'],Xiaomi:['Redmi Note 12','Redmi Note 13','Redmi 13C','Poco X6'],Oppo:['A17','A38','Reno 11'],Realme:['C55','C67','11 Pro'],Vivo:['Y17s','Y36','V29'],Huawei:['Y9','Nova 9'],Infinix:['Hot 40','Note 30'],Tecno:['Spark 20','Camon 20'],'أخرى':[]};
 const IS=['شاشة','بطارية','شاحن / بورت شحن','سوفت وير','كاميرا','سماعة / ميكروفون','دخل عليه مياه','عطل تاني'];
+let PR=[];
+async function showP(){const m=$('#md').value.trim(),is=[...document.querySelectorAll('#ch .on')].map(s=>s.textContent);PR=[];$('#pq').innerHTML='';if(!m||!is.length)return;
+ try{const r=await db.get('prices','?model=ilike.'+encodeURIComponent(m));PR=is.map(i=>{const x=r.find(y=>y.issue==i);return x?i+': '+x.price+' جنيه':''}).filter(Boolean);if(PR.length)$('#pq').innerHTML='<div class="card">💰 السعر التقريبي<br>'+PR.join('<br>')+'</div>'}catch(e){}}
 function rAsk(){
- V.innerHTML='<h2>استفسار سريع</h2><p class="m">اختار جهازك والعطل وهيوصلنا على واتساب فورًا</p><select id="br">'+Object.keys(BR).map(b=>'<option>'+b+'</option>').join('')+'</select><input id="md" list="ml" placeholder="الموديل"><datalist id="ml"></datalist><div class="chips" id="ch">'+IS.map(x=>'<span>'+x+'</span>').join('')+'</div><button class="b w" id="sd">إرسال على واتساب</button>';
- const fill=()=>{$('#ml').innerHTML=BR[$('#br').value].map(m=>'<option value="'+m+'">').join('');$('#md').value=''};fill();$('#br').onchange=fill;
- document.querySelectorAll('#ch span').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+ V.innerHTML='<h2>استفسار سريع</h2><p class="m">اختار جهازك والعطل وهيوصلنا على واتساب فورًا</p><select id="br">'+Object.keys(BR).map(b=>'<option>'+b+'</option>').join('')+'</select><input id="md" list="ml" placeholder="الموديل"><datalist id="ml"></datalist><div class="chips" id="ch">'+IS.map(x=>'<span>'+x+'</span>').join('')+'</div><div id="pq"></div><button class="b w" id="sd">إرسال على واتساب</button>';
+ const fill=()=>{$('#ml').innerHTML=BR[$('#br').value].map(m=>'<option value="'+m+'">').join('');$('#md').value=''};fill();$('#br').onchange=fill;$('#md').oninput=showP;
+ document.querySelectorAll('#ch span').forEach(s=>s.onclick=()=>{s.classList.toggle('on');showP()});
  $('#sd').onclick=()=>{const is=[...document.querySelectorAll('#ch .on')].map(s=>s.textContent);if(!$('#md').value||!is.length)return toast('اختار الموديل والعطل');
-  location.href=wa(C.WHATSAPP,'استفسار صيانة\nالجهاز: '+$('#br').value+' '+$('#md').value+'\nالعطل: '+is.join('، '))}
+  location.href=wa(C.WHATSAPP,'استفسار صيانة\nالجهاز: '+$('#br').value+' '+$('#md').value+'\nالعطل: '+is.join('، ')+(PR.length?'\nالسعر التقريبي: '+PR.join('، '):''))}
 }
 
+const ALLM=Object.values(BR).flat(),num=x=>+x||0,sum=(a,f)=>a.reduce((s,x)=>s+num(f(x)),0);
+let AT='orders',EXP=[],PRT=[],PRC=[];
+function rcpt(o){const u=location.origin+location.pathname+'#n='+o.num,q=qrcode(0,'M');q.addData(u);q.make();
+ const d=document.createElement('div');d.id='rc';
+ d.innerHTML='<div class="card" style="background:#fff;color:#000;text-align:center"><b>Amin Mahmoud</b><p>إيصال استلام #'+o.num+'</p><p>'+esc(o.device)+' - '+esc(o.issue)+'</p>'+(o.accessories?'<p>الملحقات: '+esc(o.accessories)+'</p>':'')+(num(o.deposit)?'<p>العربون: '+o.deposit+' جنيه</p>':'')+q.createSvgTag(5)+'<p style="font-size:12px">امسح الكود لمتابعة جهازك (وأدخل آخر 4 أرقام من موبايلك)</p></div><div class="row"><button class="wa" id="rw">واتساب للعميل</button><button class="wa" id="rp">طباعة</button><button class="wa" id="rx">إغلاق</button></div>';
+ document.body.appendChild(d);
+ $('#rx').onclick=()=>d.remove();$('#rp').onclick=()=>print();
+ $('#rw').onclick=()=>{location.href=wa(intl(o.phone),'إيصال استلام #'+o.num+'\nالجهاز: '+o.device+'\nتابع جهازك: '+u+'\nAmin Mahmoud')}}
 function rAdm(){
  if(!isAdm()){V.innerHTML='<h2>دخول الإدارة</h2><input id="em" type="email" placeholder="الإيميل"><input id="pw" type="password" placeholder="الباسورد"><button class="b w" id="lg">دخول</button>';
   $('#lg').onclick=async()=>{try{const r=await sb('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('#em').value.trim(),password:$('#pw').value})});token=r.access_token;localStorage.tk=token;localStorage.rt=r.refresh_token;rAdm()}catch(e){toast('بيانات غير صحيحة')}};return}
- V.innerHTML='<div class="row"><h2 style="flex:1">لوحة الإدارة</h2><button class="wa" id="lo">خروج</button></div><div class="card"><b>جهاز جديد</b><input id="nm" type="number" inputmode="numeric" placeholder="رقم الإيصال (انت اللي تحدده)"><input id="cn" placeholder="اسم العميل"><input id="cp" type="tel" placeholder="رقم موبايل العميل"><input id="dv" placeholder="الجهاز (مثال: iPhone 15)"><input id="is" placeholder="العطل"><input id="pr" type="number" placeholder="التكلفة (اختياري)"><button class="b w" id="ad">تسجيل واستلام الجهاز</button></div><div class="row"><input id="q" placeholder="بحث بالرقم أو الاسم أو الجهاز"><select id="f" style="width:auto"><option value="">الكل</option>'+KEYS.map(k=>'<option value="'+k+'">'+ST[k]+'</option>').join('')+'</select></div><div id="ls"></div>';
+ V.innerHTML='<div class="row"><h2 style="flex:1">لوحة الإدارة</h2><button class="wa" id="lo">خروج</button></div><div class="chips" id="tb">'+[['orders','الأجهزة'],['rep','التقارير'],['parts','المخزن'],['prices','الأسعار']].map(([k,t])=>'<span data-k="'+k+'" class="'+(AT==k?'on':'')+'">'+t+'</span>').join('')+'</div><div id="pn"></div>';
  $('#lo').onclick=()=>{token='';localStorage.removeItem('tk');localStorage.removeItem('rt');rAdm()};
- $('#ad').onclick=async()=>{if(!$('#nm').value||!$('#dv').value||$('#cp').value.replace(/\D/g,'').length<4)return toast('اكتب رقم الإيصال والجهاز وموبايل العميل');try{const o=await db.add({num:+$('#nm').value,customer:$('#cn').value,phone:$('#cp').value,device:$('#dv').value,issue:$('#is').value,price:$('#pr').value||null});toast('رقم الإيصال: '+o.num);['nm','cn','cp','dv','is','pr'].forEach(i=>$('#'+i).value='');load()}catch(e){toast(/duplicate|23505/.test(e.message)?'رقم الإيصال ده مستخدم قبل كده':'خطأ في الحفظ')}};
- $('#q').oninput=draw;$('#f').onchange=draw;load();
-}
-async function load(){try{ORD=await db.list()}catch(e){token='';localStorage.removeItem('tk');return rAdm()}draw()}
-function draw(){const q=$('#q').value.trim().toLowerCase(),f=$('#f').value;
+ document.querySelectorAll('#tb span').forEach(s=>s.onclick=()=>{AT=s.dataset.k;rAdm()});
+ ({orders:pOrders,rep:pRep,parts:pParts,prices:pPrices})[AT]()}
+function pOrders(){
+ $('#pn').innerHTML='<div class="card"><b>جهاز جديد</b><input id="nm" type="number" inputmode="numeric" placeholder="رقم الإيصال (انت اللي تحدده)"><input id="cn" placeholder="اسم العميل"><input id="cp" type="tel" placeholder="رقم موبايل العميل"><input id="dv" list="am" placeholder="الجهاز (مثال: iPhone 15)"><datalist id="am">'+ALLM.map(m=>'<option value="'+m+'">').join('')+'</datalist><input id="is" placeholder="العطل"><div class="row"><input id="pr" type="number" placeholder="التكلفة"><input id="dp" type="number" placeholder="العربون"></div><input id="wd" type="number" value="30" placeholder="مدة الضمان بالأيام"><div class="chips" id="ac">'+['شاحن','شريحة','جراب','كارت ميموري'].map(x=>'<span>'+x+'</span>').join('')+'</div><button class="b w" id="ad">تسجيل واستلام الجهاز</button></div><div class="row"><input id="q" placeholder="بحث بالرقم أو الاسم أو الجهاز أو الموبايل"><select id="f" style="width:auto"><option value="">الكل</option>'+KEYS.map(k=>'<option value="'+k+'">'+ST[k]+'</option>').join('')+'</select></div><button class="wa" id="ex">نسخ كل البيانات (CSV)</button><div id="ls"></div>';
+ document.querySelectorAll('#ac span').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+ $('#ad').onclick=async()=>{if(!$('#nm').value||!$('#dv').value||$('#cp').value.replace(/\D/g,'').length<4)return toast('اكتب رقم الإيصال والجهاز وموبايل العميل');
+  try{const o=await db.add({num:+$('#nm').value,customer:$('#cn').value,phone:$('#cp').value,device:$('#dv').value,issue:$('#is').value,price:$('#pr').value||null,deposit:num($('#dp').value),warranty_days:num($('#wd').value),accessories:[...document.querySelectorAll('#ac .on')].map(s=>s.textContent).join('، ')});
+   ['nm','cn','cp','dv','is','pr','dp'].forEach(i=>$('#'+i).value='');document.querySelectorAll('#ac .on').forEach(s=>s.classList.remove('on'));await load();rcpt(o)}
+  catch(e){toast(/duplicate|23505/.test(e.message)?'رقم الإيصال ده مستخدم قبل كده':'خطأ في الحفظ')}};
+ $('#q').oninput=draw;$('#f').onchange=draw;
+ $('#ex').onclick=async()=>{const rows=[['رقم','العميل','الموبايل','الجهاز','العطل','الحالة','التكلفة','العربون','التاريخ']].concat(ORD.map(o=>[o.num,o.customer,o.phone,o.device,o.issue,ST[o.status],o.price??'',o.deposit??'',(o.created_at||'').slice(0,10)]));
+  const c=rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n');try{await navigator.clipboard.writeText(c);toast('تم النسخ، الصقه في Excel أو الملاحظات')}catch(e){toast('تعذر النسخ')}};
+ load()}
+async function load(){try{ORD=await db.list()}catch(e){token='';localStorage.removeItem('tk');return rAdm()}if($('#ls'))draw()}
+function draw(){const q=$('#q').value.trim().toLowerCase(),f=$('#f').value,cnt={};ORD.forEach(o=>cnt[o.phone]=(cnt[o.phone]||0)+1);
  const rows=ORD.map((o,i)=>[o,i]).filter(([o])=>(!f||o.status==f)&&(!q||[o.num,o.customer,o.device,o.phone].join(' ').toLowerCase().includes(q)));
- $('#ls').innerHTML=rows.map(([o,i])=>'<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><p class="m">'+esc(o.customer)+' • '+esc(o.issue)+'</p><select id="s'+i+'">'+KEYS.map(k=>'<option value="'+k+'"'+(k==o.status?' selected':'')+'>'+ST[k]+'</option>').join('')+'</select><input id="t'+i+'" placeholder="ملاحظة للعميل" value="'+esc(o.note)+'"><div class="row"><button class="b" data-sv="'+i+'">حفظ</button>'+(o.phone?'<button class="wa" data-wa="'+i+'">واتساب للعميل</button>':'')+'</div></div>').join('')||'<p class="m">مفيش نتائج.</p>';
- document.querySelectorAll('[data-sv]').forEach(b=>b.onclick=async()=>{const i=b.dataset.sv;try{await db.upd(ORD[i],{status:$('#s'+i).value,note:$('#t'+i).value});toast('تم الحفظ');load()}catch(e){toast('خطأ')}});
- document.querySelectorAll('[data-wa]').forEach(b=>b.onclick=()=>{const o=ORD[b.dataset.wa];location.href=wa(intl(o.phone),'أهلًا '+(o.customer||'')+'\nجهازك ('+o.device+') رقم #'+o.num+'\nالحالة: '+ST[$('#s'+b.dataset.wa).value]+(o.price?'\nالتكلفة: '+o.price+' جنيه':'')+'\nAmin Mahmoud')})}
+ $('#ls').innerHTML=rows.map(([o,i])=>{const late=o.status=='ready'&&Date.now()-new Date(o.updated_at)>6048e5;
+  return '<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span>'+(late?' <span class="tag">⏰ جاهز من +7 أيام</span>':'')+(cnt[o.phone]>1?' <span class="tag">عميل متكرر ×'+cnt[o.phone]+'</span>':'')+'<p class="m">'+esc(o.customer)+' • '+esc(o.issue)+(o.accessories?' • '+esc(o.accessories):'')+'</p><select id="s'+i+'">'+KEYS.map(k=>'<option value="'+k+'"'+(k==o.status?' selected':'')+'>'+ST[k]+'</option>').join('')+'</select><input id="t'+i+'" placeholder="ملاحظة للعميل" value="'+esc(o.note)+'"><div class="row"><input id="p'+i+'" type="number" placeholder="التكلفة" value="'+esc(o.price)+'"><input id="d'+i+'" type="number" placeholder="العربون" value="'+esc(o.deposit)+'"></div><div class="row"><button class="b" data-sv="'+i+'">حفظ</button><button class="wa" data-rc="'+i+'">إيصال</button>'+(o.phone?'<button class="wa" data-wa="'+i+'">واتساب</button>':'')+'</div></div>'}).join('')||'<p class="m">مفيش نتائج.</p>';
+ document.querySelectorAll('[data-sv]').forEach(b=>b.onclick=async()=>{const i=b.dataset.sv,o=ORD[i],st=$('#s'+i).value,p={status:st,note:$('#t'+i).value,price:$('#p'+i).value||null,deposit:num($('#d'+i).value)};if(st=='delivered'&&!o.delivered_at)p.delivered_at=new Date().toISOString();
+  try{await db.upd(o,p);toast('تم الحفظ');load()}catch(e){toast('خطأ')}});
+ document.querySelectorAll('[data-rc]').forEach(b=>b.onclick=()=>rcpt(ORD[b.dataset.rc]));
+ document.querySelectorAll('[data-wa]').forEach(b=>b.onclick=()=>{const i=b.dataset.wa,o=ORD[i],pr=$('#p'+i).value,dp=num($('#d'+i).value);location.href=wa(intl(o.phone),'أهلًا '+(o.customer||'')+'\nجهازك ('+o.device+') رقم #'+o.num+'\nالحالة: '+ST[$('#s'+i).value]+(pr?'\nالتكلفة: '+pr+' جنيه'+(dp?'\nالمتبقي: '+(pr-dp)+' جنيه':''):'')+'\nAmin Mahmoud')})}
+async function pRep(){const P=$('#pn');P.innerHTML='<p class="m">جاري التحميل...</p>';
+ try{ORD=await db.list();EXP=await db.get('expenses','?order=created_at.desc')}catch(e){return toast('خطأ في التحميل')}
+ const per=window.RP||'d',n=new Date(),st=per=='d'?new Date(n.getFullYear(),n.getMonth(),n.getDate()):new Date(n.getFullYear(),n.getMonth(),1),inP=d=>new Date(d)>=st;
+ const dl=ORD.filter(o=>o.status=='delivered'&&inP(o.delivered_at||o.updated_at)),ex=EXP.filter(e=>inP(e.created_at));
+ const rev=sum(dl,o=>o.price),exs=sum(ex,e=>e.amount),pend=sum(ORD.filter(o=>o.status!='delivered'),o=>o.deposit),top={};
+ ORD.filter(o=>inP(o.created_at)).forEach(o=>top[o.issue]=(top[o.issue]||0)+1);
+ const tl=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ P.innerHTML='<select id="rp1"><option value="d"'+(per=='d'?' selected':'')+'>اليوم</option><option value="m"'+(per=='m'?' selected':'')+'>الشهر</option></select><div class="card"><p class="m">الإيراد (أجهزة اتسلمت)</p><div class="st">'+rev+' جنيه</div><p class="m">المصروفات: '+exs+' • صافي الربح: <b>'+(rev-exs)+'</b></p><p class="m">أجهزة اتسلمت: '+dl.length+' • عربون أجهزة لسه عندك: '+pend+'</p></div><div class="card"><b>أكتر الأعطال</b>'+(tl.map(([k,v])=>'<p class="m">'+esc(k)+' ×'+v+'</p>').join('')||'<p class="m">لا بيانات</p>')+'</div><div class="card"><b>مصروف جديد</b><input id="et" placeholder="البند (إيجار، قطعة، كهرباء...)"><input id="ea" type="number" placeholder="المبلغ"><button class="b w" id="eb">إضافة</button></div>'+ex.map(e=>'<div class="card">'+esc(e.title)+' <b>'+e.amount+'</b> جنيه <button class="wa" data-de="'+e.id+'">حذف</button></div>').join('');
+ $('#rp1').onchange=()=>{window.RP=$('#rp1').value;pRep()};
+ $('#eb').onclick=async()=>{if(!$('#ea').value)return toast('اكتب المبلغ');try{await db.ins('expenses',{title:$('#et').value,amount:+$('#ea').value});pRep()}catch(e){toast('خطأ')}};
+ document.querySelectorAll('[data-de]').forEach(b=>b.onclick=async()=>{try{await db.del('expenses',b.dataset.de);pRep()}catch(e){toast('خطأ')}})}
+async function pParts(){const P=$('#pn');try{PRT=await db.get('parts','?order=name')}catch(e){return toast('خطأ في التحميل')}
+ P.innerHTML='<div class="card"><b>قطعة جديدة</b><input id="ptn" placeholder="اسم القطعة (مثال: شاشة iPhone 13)"><div class="row"><input id="ptq" type="number" placeholder="الكمية"><input id="ptm" type="number" placeholder="حد التنبيه" value="2"></div><button class="b w" id="pa">إضافة</button></div>'+PRT.map((p,i)=>'<div class="card"><b>'+esc(p.name)+'</b> '+(p.qty<=p.min_qty?'<span class="tag">⚠️ قارب على النفاد</span>':'')+'<div class="st">'+p.qty+'</div><div class="row"><button class="b" data-pm="'+i+'">−1</button><button class="b" data-pp="'+i+'">+1</button><button class="wa" data-px="'+i+'">حذف</button></div></div>').join('');
+ $('#pa').onclick=async()=>{if(!$('#ptn').value)return toast('اكتب اسم القطعة');try{await db.ins('parts',{name:$('#ptn').value,qty:num($('#ptq').value),min_qty:num($('#ptm').value)});pParts()}catch(e){toast('خطأ')}};
+ const ch=(a,f)=>document.querySelectorAll('['+a+']').forEach(b=>b.onclick=async()=>{const p=PRT[b.getAttribute(a)];try{await f(p);pParts()}catch(e){toast('خطأ')}});
+ ch('data-pm',p=>db.pat('parts',p.id,{qty:Math.max(0,p.qty-1)}));ch('data-pp',p=>db.pat('parts',p.id,{qty:p.qty+1}));ch('data-px',p=>db.del('parts',p.id))}
+async function pPrices(){const P=$('#pn');try{PRC=await db.get('prices','?order=model')}catch(e){return toast('خطأ في التحميل')}
+ P.innerHTML='<div class="card"><b>سعر جديد (بيظهر للعميل في الاستفسار)</b><input id="prm" list="am" placeholder="الموديل (زي iPhone 15)"><datalist id="am">'+ALLM.map(m=>'<option value="'+m+'">').join('')+'</datalist><select id="pri">'+IS.map(x=>'<option>'+x+'</option>').join('')+'</select><input id="prp" type="number" placeholder="السعر"><button class="b w" id="pra">إضافة</button></div>'+PRC.map(p=>'<div class="card">'+esc(p.model)+' • '+esc(p.issue)+' <b>'+esc(p.price)+'</b> جنيه <button class="wa" data-dp="'+p.id+'">حذف</button></div>').join('');
+ $('#pra').onclick=async()=>{if(!$('#prm').value||!$('#prp').value)return toast('اكتب الموديل والسعر');try{await db.ins('prices',{model:$('#prm').value.trim(),issue:$('#pri').value,price:+$('#prp').value});pPrices()}catch(e){toast('خطأ')}};
+ document.querySelectorAll('[data-dp]').forEach(b=>b.onclick=async()=>{try{await db.del('prices',b.dataset.dp);pPrices()}catch(e){toast('خطأ')}})}
 
 $('#up').onclick=async()=>{toast('جاري البحث عن تحديث...');
  try{const v=await(await fetch('version.json?'+Date.now(),{cache:'no-store'})).json();
