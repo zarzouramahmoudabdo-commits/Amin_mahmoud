@@ -29,9 +29,21 @@ a.wa{text-decoration:none;display:inline-block}#rc{position:fixed;inset:0;backgr
 @keyframes spIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
 @keyframes spBar{to{transform:translateX(150%)}}
+#ad{display:flex;align-items:center;background:linear-gradient(90deg,#0f1b36,#16264a 50%,#0f1b36);border-bottom:1px solid #2a3d6b;box-shadow:0 6px 22px rgba(242,182,50,.07);position:relative;overflow:hidden}
+#ad:before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.adb{flex:none;padding:7px 12px;margin:7px 8px;border-radius:999px;background:linear-gradient(135deg,#ffe08a,#f2b632 60%,#b9780f);color:#1a1200;font-weight:800;font-size:13px;animation:adp 2s ease-in-out infinite;z-index:1}
+.adw{flex:1;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+#tk{display:flex;width:max-content;animation:adm 30s linear infinite}
+#tk span{padding:0 22px;font-size:15px;color:var(--tx);font-weight:600}
+#tk span:after{content:"✦";color:var(--gold);margin-inline-start:44px}
+#ad:active #tk{animation-play-state:paused}
+@keyframes adm{to{transform:translateX(50%)}}
+@keyframes adp{50%{box-shadow:0 0 0 6px rgba(242,182,50,.18)}}
+@media (prefers-reduced-motion:reduce){#tk{animation:none}}
 </style></head><body><div id="sp"><img src="icon-192.png" alt=""><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small><i></i></div>
 <script>try{if(sessionStorage.sp)document.getElementById('sp').remove();else sessionStorage.sp=1}catch(e){}</script>
 <header><img src="icon-192.png" alt=""><div><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small></div><button id="up">🔄 تحديث</button></header>
+<div id="ad"><span class="adb">📢 عروض</span><div class="adw"><div id="tk"></div></div></div>
 <main id="v"></main>
 <nav><button data-t="track">تتبع جهازي</button><button data-t="ask">استفسار</button><button data-t="adm">الإدارة</button></nav>
 <div id="toast"></div>
@@ -156,5 +168,7 @@ $('#up').onclick=async()=>{toast('جاري البحث عن تحديث...');
   setTimeout(()=>location.reload(),900)}
  catch(e){toast('تعذر التحديث، تأكد من الإنترنت')}};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+const ADS=C.ADS||['📱 شاشتك اتكسرت؟ سيبها علينا ونرجّعها لك زي الجديدة','🔋 البطارية بتخلص بسرعة؟ غيّرها النهارده وارتاح','⚡ تابع جهازك لحظة بلحظة من التطبيق من غير ما تسأل','💬 اسأل عن سعر أي عطل وهييجيلك الرد على واتساب','🛠️ أي عطل في موبايلك؟ تعالى لنا في محل الحبيب','📍 العباسي، شارع الصاغة | Amin Mahmoud'];
+(()=>{const t=$('#tk'),h=ADS.map(a=>'<span>'+esc(a)+'</span>').join('');t.innerHTML=h+h;requestAnimationFrame(()=>{t.style.animationDuration=Math.max(18,t.scrollWidth/2/55)+'s'})})();
 go('track');
 </script></body></html>
