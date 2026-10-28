@@ -43,7 +43,7 @@ a.wa{text-decoration:none;display:inline-block}#rc{position:fixed;inset:0;backgr
 </style></head><body><div id="sp"><img src="icon-192.png" alt=""><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small><i></i></div>
 <script>try{if(sessionStorage.sp)document.getElementById('sp').remove();else sessionStorage.sp=1}catch(e){}</script>
 <header><img src="icon-192.png" alt=""><div><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small></div><button id="up">🔄 تحديث</button></header>
-<div id="ad"><span class="adb">📢 عروض</span><div class="adw"><div id="tk"></div></div></div>
+<div id="ad"><span class="adb">📢</span><div class="adw"><div id="tk"></div></div></div>
 <main id="v"></main>
 <nav><button data-t="track">تتبع جهازي</button><button data-t="ask">استفسار</button><button data-t="adm">الإدارة</button></nav>
 <div id="toast"></div>
@@ -69,7 +69,8 @@ const db={
  get:(t,q='')=>sb('/rest/v1/'+t+q),
  ins:(t,o)=>sb('/rest/v1/'+t,{method:'POST',body:JSON.stringify(o)}),
  pat:(t,id,o)=>sb('/rest/v1/'+t+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(o)}),
- del:(t,id)=>sb('/rest/v1/'+t+'?id=eq.'+id,{method:'DELETE'})
+ del:(t,id)=>sb('/rest/v1/'+t+'?id=eq.'+id,{method:'DELETE'}),
+ ups:(t,o)=>sb('/rest/v1/'+t+'?on_conflict=key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(o)})
 };
 const wa=(num,txt)=>'https://wa.me/'+num+'?text='+encodeURIComponent(txt);
 const intl=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('0')?'20'+p.slice(1):p};
@@ -113,10 +114,10 @@ function rcpt(o){const u=location.origin+location.pathname+'#n='+o.num,q=qrcode(
 function rAdm(){
  if(!isAdm()){V.innerHTML='<h2>دخول الإدارة</h2><input id="em" type="email" placeholder="الإيميل"><input id="pw" type="password" placeholder="الباسورد"><button class="b w" id="lg">دخول</button>';
   $('#lg').onclick=async()=>{try{const r=await sb('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('#em').value.trim(),password:$('#pw').value})});token=r.access_token;localStorage.tk=token;localStorage.rt=r.refresh_token;rAdm()}catch(e){toast('بيانات غير صحيحة')}};return}
- V.innerHTML='<div class="row"><h2 style="flex:1">لوحة الإدارة</h2><button class="wa" id="lo">خروج</button></div><div class="chips" id="tb">'+[['orders','الأجهزة'],['rep','التقارير'],['parts','المخزن'],['prices','الأسعار']].map(([k,t])=>'<span data-k="'+k+'" class="'+(AT==k?'on':'')+'">'+t+'</span>').join('')+'</div><div id="pn"></div>';
+ V.innerHTML='<div class="row"><h2 style="flex:1">لوحة الإدارة</h2><button class="wa" id="lo">خروج</button></div><div class="chips" id="tb">'+[['orders','الأجهزة'],['rep','التقارير'],['parts','المخزن'],['prices','الأسعار'],['ads','الإعلانات']].map(([k,t])=>'<span data-k="'+k+'" class="'+(AT==k?'on':'')+'">'+t+'</span>').join('')+'</div><div id="pn"></div>';
  $('#lo').onclick=()=>{token='';localStorage.removeItem('tk');localStorage.removeItem('rt');rAdm()};
  document.querySelectorAll('#tb span').forEach(s=>s.onclick=()=>{AT=s.dataset.k;rAdm()});
- ({orders:pOrders,rep:pRep,parts:pParts,prices:pPrices})[AT]()}
+ ({orders:pOrders,rep:pRep,parts:pParts,prices:pPrices,ads:pAds})[AT]()}
 function pOrders(){
  $('#pn').innerHTML='<div class="card"><b>جهاز جديد</b><input id="nm" type="number" inputmode="numeric" placeholder="رقم الإيصال (انت اللي تحدده)"><input id="cn" placeholder="اسم العميل"><input id="cp" type="tel" placeholder="رقم موبايل العميل"><input id="dv" list="am" placeholder="الجهاز (مثال: iPhone 15)"><datalist id="am">'+ALLM.map(m=>'<option value="'+m+'">').join('')+'</datalist><input id="is" placeholder="العطل"><div class="row"><input id="pr" type="number" placeholder="التكلفة"><input id="dp" type="number" placeholder="العربون"></div><input id="wd" type="number" value="30" placeholder="مدة الضمان بالأيام"><div class="chips" id="ac">'+['شاحن','شريحة','جراب','كارت ميموري'].map(x=>'<span>'+x+'</span>').join('')+'</div><button class="b w" id="ad">تسجيل واستلام الجهاز</button></div><div class="row"><input id="q" placeholder="بحث بالرقم أو الاسم أو الجهاز أو الموبايل"><select id="f" style="width:auto"><option value="">الكل</option>'+KEYS.map(k=>'<option value="'+k+'">'+ST[k]+'</option>').join('')+'</select></div><button class="wa" id="ex">نسخ كل البيانات (CSV)</button><div id="ls"></div>';
  document.querySelectorAll('#ac span').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
@@ -168,7 +169,13 @@ $('#up').onclick=async()=>{toast('جاري البحث عن تحديث...');
   setTimeout(()=>location.reload(),900)}
  catch(e){toast('تعذر التحديث، تأكد من الإنترنت')}};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-const ADS=C.ADS||['📱 شاشتك اتكسرت؟ سيبها علينا ونرجّعها لك زي الجديدة','🔋 البطارية بتخلص بسرعة؟ غيّرها النهارده وارتاح','⚡ تابع جهازك لحظة بلحظة من التطبيق من غير ما تسأل','💬 اسأل عن سعر أي عطل وهييجيلك الرد على واتساب','🛠️ أي عطل في موبايلك؟ تعالى لنا في محل الحبيب','📍 العباسي، شارع الصاغة | Amin Mahmoud'];
-(()=>{const t=$('#tk'),h=ADS.map(a=>'<span>'+esc(a)+'</span>').join('');t.innerHTML=h+h;requestAnimationFrame(()=>{t.style.animationDuration=Math.max(18,t.scrollWidth/2/55)+'s'})})();
+const DEF=C.ADS||['📱 شاشتك اتكسرت؟ سيبها علينا ونرجّعها لك زي الجديدة','🔋 البطارية بتخلص بسرعة؟ غيّرها النهارده وارتاح','⚡ تابع جهازك لحظة بلحظة من التطبيق من غير ما تسأل','💬 اسأل عن سعر أي عطل وهييجيلك الرد على واتساب','🛠️ أي عطل في موبايلك؟ تعالى لنا في محل الحبيب','📍 العباسي، شارع الصاغة | Amin Mahmoud'];
+function setAds(x){const L=x==null?DEF:String(x).split('\n').map(v=>v.trim()).filter(Boolean),t=$('#tk');$('#ad').style.display=L.length?'':'none';const h=L.map(v=>'<span>'+esc(v)+'</span>').join('');t.innerHTML=h+h;t.style.animation='none';requestAnimationFrame(()=>{t.style.animation='';t.style.animationDuration=Math.max(18,t.scrollWidth/2/55)+'s'})}
+async function pAds(){const P=$('#pn');let v;try{const r=await db.get('settings','?key=eq.ads&select=value');v=r[0]?r[0].value:DEF.join('\n')}catch(e){return toast('خطأ في التحميل')}
+ P.innerHTML='<div class="card"><b>جُمل الشريط الإعلاني</b><p class="m">اكتب كل جملة في سطر. بعد الحفظ بتظهر لكل الناس اللي معاهم التطبيق. لو مسحت كل الجُمل الشريط بيختفي.</p><textarea id="at" rows="9">'+esc(v)+'</textarea><button class="b w" id="as">حفظ</button><button class="wa" id="ar">الرجوع للجُمل الافتراضية</button></div>';
+ $('#ar').onclick=()=>{$('#at').value=DEF.join('\n');toast('اضغط حفظ لتأكيد الرجوع')};
+ $('#as').onclick=async()=>{const t=$('#at').value.split('\n').map(x=>x.trim()).filter(Boolean).join('\n');try{await db.ups('settings',{key:'ads',value:t});localStorage.ads=t;setAds(t);toast('تم الحفظ، هيظهر للكل')}catch(e){toast('خطأ في الحفظ')}}}
+setAds(localStorage.ads);
+(async()=>{try{const r=await db.get('settings','?key=eq.ads&select=value');if(r[0]){localStorage.ads=r[0].value;setAds(r[0].value)}}catch(e){}})();
 go('track');
 </script></body></html>
