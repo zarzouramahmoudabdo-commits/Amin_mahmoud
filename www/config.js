@@ -3,7 +3,7 @@ window.CFG = {
   NAME: "Amin Mahmoud",
   HOURS: "",
   MAP: "",
-  VERSION: "1.3.0",
+  VERSION: "1.4.0",
   WHATSAPP: "201060050431",
   SUPABASE_URL: "https://uciymvredhdrxveyoweq.supabase.co",
   SUPABASE_KEY: "sb_publishable_cxdOzqvjV4DdTjBcZT-ynA_V2aGyXf3"
