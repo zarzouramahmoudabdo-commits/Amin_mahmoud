@@ -29,21 +29,21 @@ a.wa{text-decoration:none;display:inline-block}#rc{position:fixed;inset:0;backgr
 @keyframes spIn{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
 @keyframes spBar{to{transform:translateX(150%)}}
-#ad{display:flex;align-items:center;background:linear-gradient(90deg,#0f1b36,#16264a 50%,#0f1b36);border-bottom:1px solid #2a3d6b;box-shadow:0 6px 22px rgba(242,182,50,.07);position:relative;overflow:hidden}
-#ad:before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+#adbar{display:flex;align-items:center;background:linear-gradient(90deg,#0f1b36,#16264a 50%,#0f1b36);border-bottom:1px solid #2a3d6b;box-shadow:0 6px 22px rgba(242,182,50,.07);position:relative;overflow:hidden}
+#adbar:before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
 .adb{flex:none;padding:7px 12px;margin:7px 8px;border-radius:999px;background:linear-gradient(135deg,#ffe08a,#f2b632 60%,#b9780f);color:#1a1200;font-weight:800;font-size:13px;animation:adp 2s ease-in-out infinite;z-index:1}
 .adw{flex:1;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 #tk{display:flex;width:max-content;animation:adm 30s linear infinite}
 #tk span{padding:0 22px;font-size:15px;color:var(--tx);font-weight:600}
 #tk span:after{content:"✦";color:var(--gold);margin-inline-start:44px}
-#ad:active #tk{animation-play-state:paused}
+#adbar:active #tk{animation-play-state:paused}
 @keyframes adm{to{transform:translateX(50%)}}
 @keyframes adp{50%{box-shadow:0 0 0 6px rgba(242,182,50,.18)}}
 @media (prefers-reduced-motion:reduce){#tk{animation:none}}
 </style></head><body><div id="sp"><img src="icon-192.png" alt=""><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small><i></i></div>
 <script>try{if(sessionStorage.sp)document.getElementById('sp').remove();else sessionStorage.sp=1}catch(e){}</script>
 <header><img src="icon-192.png" alt=""><div><b>Amin Mahmoud</b><small>مركز صيانة الموبايلات</small></div><button id="up">🔄 تحديث</button></header>
-<div id="ad"><span class="adb">📢</span><div class="adw"><div id="tk"></div></div></div>
+<div id="adbar"><span class="adb">📢</span><div class="adw"><div id="tk"></div></div></div>
 <main id="v"></main>
 <nav><button data-t="track">تتبع جهازي</button><button data-t="ask">استفسار</button><button data-t="adm">الإدارة</button></nav>
 <div id="toast"></div>
@@ -54,7 +54,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={received:'تم الاستلام',checking:'جاري الفحص',waiting_part:'في انتظار قطعة غيار',repairing:'جاري الإصلاح',ready:'جاهز للاستلام ✅',delivered:'تم التسليم'};
 const KEYS=Object.keys(ST);
-const toast=t=>{const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)};
+const dg=x=>String(x).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)),toast=t=>{const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)};
 let token=localStorage.getItem('tk')||'',ORD=[];
 const isAdm=()=>!!token;
 async function sb(p,o={},r=0){const h={apikey:C.SUPABASE_KEY,'Content-Type':'application/json',Prefer:'return=representation',...(o.headers||{})};const a=token||(C.SUPABASE_KEY.startsWith('eyJ')?C.SUPABASE_KEY:'');if(a)h.Authorization='Bearer '+a;
@@ -73,7 +73,7 @@ const db={
  ups:(t,o)=>sb('/rest/v1/'+t+'?on_conflict=key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(o)})
 };
 const wa=(num,txt)=>'https://wa.me/'+num+'?text='+encodeURIComponent(txt);
-const intl=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('0')?'20'+p.slice(1):p};
+const intl=p=>{p=dg(p||'').replace(/\D/g,'');return p.startsWith('0')?'20'+p.slice(1):p};
 
 function go(t){if(!ok){V.innerHTML='<div class="card">التطبيق غير مربوط بقاعدة البيانات بعد، أضف مفاتيح Supabase في config.js.</div>';return}document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));({track:rTrack,ask:rAsk,adm:rAdm})[t]()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
@@ -83,7 +83,7 @@ function shopCard(){const t=new Date(),h=t.getHours()+t.getMinutes()/60,o=h>=SH.
  return '<div class="card"><b>Amin Mahmoud</b> <span class="tag">'+(o?'🟢 مفتوح الآن':'🔴 مقفول دلوقتي')+'</span><p class="m">📍 '+esc(SH.addr)+'</p><p class="m">🕙 من '+fmt(SH.open)+' إلى '+fmt(SH.close)+' • '+(o?'بنقفل الساعة '+fmt(SH.close):'بنفتح الساعة '+fmt(SH.open))+'</p><div class="row"><a class="wa" href="tel:+'+C.WHATSAPP+'">📞 اتصال</a><a class="wa" href="https://wa.me/'+C.WHATSAPP+'">💬 واتساب</a><a class="wa" href="'+mp+'">📍 الاتجاهات</a></div></div>'}
 function rTrack(){
  V.innerHTML=shopCard()+'<h2>تابع جهازك</h2><p class="m">اكتب رقم الإيصال وآخر 4 أرقام من موبايلك</p><input id="n" type="number" inputmode="numeric" placeholder="رقم الإيصال"><input id="p" type="tel" inputmode="numeric" maxlength="4" placeholder="آخر 4 أرقام من موبايلك"><button class="b w" id="g">بحث</button><div id="r"></div>'+'<div class="ft">الإصدار '+esc(C.VERSION)+'</div>';
- const hm=location.hash.match(/n=(\d+)/);if(hm)$('#n').value=hm[1];$('#g').onclick=async()=>{const n=$('#n').value,p=$('#p').value.replace(/\D/g,'');if(!n||p.length<4)return toast('اكتب الرقم وآخر 4 أرقام');$('#r').innerHTML='<p class="m">جاري البحث...</p>';
+ const hm=location.hash.match(/n=(\d+)/);if(hm)$('#n').value=hm[1];$('#g').onclick=async()=>{const n=$('#n').value,p=dg($('#p').value).replace(/\D/g,'');if(!n||p.length<4)return toast('اكتب الرقم وآخر 4 أرقام');$('#r').innerHTML='<p class="m">جاري البحث...</p>';
   try{const o=await db.track(n,p);if(!o){$('#r').innerHTML='<div class="card">مفيش جهاز بالبيانات دي، تأكد من الرقم وآخر 4 أرقام.</div>';return}
    const i=KEYS.indexOf(o.status),k=KEYS.slice(0,5);
    $('#r').innerHTML='<div class="card"><b>'+esc(o.device)+'</b> <span class="tag">#'+o.num+'</span><div class="st">'+ST[o.status]+'</div>'+(o.note?'<p>'+esc(o.note)+'</p>':'')+(o.price?'<p class="m">التكلفة: '+esc(o.price)+' جنيه'+(+o.deposit?' • العربون: '+esc(o.deposit)+' • المتبقي: '+(o.price-o.deposit):'')+'</p>':'')+(o.warranty_until?'<p class="m">🛡️ الضمان حتى '+esc(o.warranty_until)+'</p>':'')+'<div class="steps">'+k.map((x,j)=>'<i class="'+(j<=i?'d':'')+'"></i>').join('')+'</div></div>'}
@@ -121,8 +121,8 @@ function rAdm(){
 function pOrders(){
  $('#pn').innerHTML='<div class="card"><b>جهاز جديد</b><input id="nm" type="number" inputmode="numeric" placeholder="رقم الإيصال (انت اللي تحدده)"><input id="cn" placeholder="اسم العميل"><input id="cp" type="tel" placeholder="رقم موبايل العميل"><input id="dv" list="am" placeholder="الجهاز (مثال: iPhone 15)"><datalist id="am">'+ALLM.map(m=>'<option value="'+m+'">').join('')+'</datalist><input id="is" placeholder="العطل"><div class="row"><input id="pr" type="number" placeholder="التكلفة"><input id="dp" type="number" placeholder="العربون"></div><input id="wd" type="number" value="30" placeholder="مدة الضمان بالأيام"><div class="chips" id="ac">'+['شاحن','شريحة','جراب','كارت ميموري'].map(x=>'<span>'+x+'</span>').join('')+'</div><button class="b w" id="ad">تسجيل واستلام الجهاز</button></div><div class="row"><input id="q" placeholder="بحث بالرقم أو الاسم أو الجهاز أو الموبايل"><select id="f" style="width:auto"><option value="">الكل</option>'+KEYS.map(k=>'<option value="'+k+'">'+ST[k]+'</option>').join('')+'</select></div><button class="wa" id="ex">نسخ كل البيانات (CSV)</button><div id="ls"></div>';
  document.querySelectorAll('#ac span').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
- $('#ad').onclick=async()=>{if(!$('#nm').value||!$('#dv').value||$('#cp').value.replace(/\D/g,'').length<4)return toast('اكتب رقم الإيصال والجهاز وموبايل العميل');
-  try{const o=await db.add({num:+$('#nm').value,customer:$('#cn').value,phone:$('#cp').value,device:$('#dv').value,issue:$('#is').value,price:$('#pr').value||null,deposit:num($('#dp').value),warranty_days:num($('#wd').value),accessories:[...document.querySelectorAll('#ac .on')].map(s=>s.textContent).join('، ')});
+ $('#ad').onclick=async()=>{if(!$('#nm').value)return toast('اكتب رقم الإيصال');if(!$('#dv').value.trim())return toast('اكتب اسم الجهاز');if(dg($('#cp').value).replace(/\D/g,'').length<4)return toast('اكتب موبايل العميل (4 أرقام على الأقل)');
+  try{const o=await db.add({num:+$('#nm').value,customer:$('#cn').value,phone:dg($('#cp').value),device:$('#dv').value,issue:$('#is').value,price:$('#pr').value||null,deposit:num($('#dp').value),warranty_days:num($('#wd').value),accessories:[...document.querySelectorAll('#ac .on')].map(s=>s.textContent).join('، ')});
    ['nm','cn','cp','dv','is','pr','dp'].forEach(i=>$('#'+i).value='');document.querySelectorAll('#ac .on').forEach(s=>s.classList.remove('on'));await load();rcpt(o)}
   catch(e){toast(/duplicate|23505/.test(e.message)?'رقم الإيصال ده مستخدم قبل كده':'خطأ في الحفظ')}};
  $('#q').oninput=draw;$('#f').onchange=draw;
@@ -170,7 +170,7 @@ $('#up').onclick=async()=>{toast('جاري البحث عن تحديث...');
  catch(e){toast('تعذر التحديث، تأكد من الإنترنت')}};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 const DEF=C.ADS||['📱 شاشتك اتكسرت؟ سيبها علينا ونرجّعها لك زي الجديدة','🔋 البطارية بتخلص بسرعة؟ غيّرها النهارده وارتاح','⚡ تابع جهازك لحظة بلحظة من التطبيق من غير ما تسأل','💬 اسأل عن سعر أي عطل وهييجيلك الرد على واتساب','🛠️ أي عطل في موبايلك؟ تعالى لنا في محل الحبيب','📍 العباسي، شارع الصاغة | Amin Mahmoud'];
-function setAds(x){const L=x==null?DEF:String(x).split('\n').map(v=>v.trim()).filter(Boolean),t=$('#tk');$('#ad').style.display=L.length?'':'none';const h=L.map(v=>'<span>'+esc(v)+'</span>').join('');t.innerHTML=h+h;t.style.animation='none';requestAnimationFrame(()=>{t.style.animation='';t.style.animationDuration=Math.max(18,t.scrollWidth/2/55)+'s'})}
+function setAds(x){const L=x==null?DEF:String(x).split('\n').map(v=>v.trim()).filter(Boolean),t=$('#tk');$('#adbar').style.display=L.length?'':'none';const h=L.map(v=>'<span>'+esc(v)+'</span>').join('');t.innerHTML=h+h;t.style.animation='none';requestAnimationFrame(()=>{t.style.animation='';t.style.animationDuration=Math.max(18,t.scrollWidth/2/55)+'s'})}
 async function pAds(){const P=$('#pn');let v;try{const r=await db.get('settings','?key=eq.ads&select=value');v=r[0]?r[0].value:DEF.join('\n')}catch(e){return toast('خطأ في التحميل')}
  P.innerHTML='<div class="card"><b>جُمل الشريط الإعلاني</b><p class="m">اكتب كل جملة في سطر. بعد الحفظ بتظهر لكل الناس اللي معاهم التطبيق. لو مسحت كل الجُمل الشريط بيختفي.</p><textarea id="at" rows="9">'+esc(v)+'</textarea><button class="b w" id="as">حفظ</button><button class="wa" id="ar">الرجوع للجُمل الافتراضية</button></div>';
  $('#ar').onclick=()=>{$('#at').value=DEF.join('\n');toast('اضغط حفظ لتأكيد الرجوع')};
